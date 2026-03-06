@@ -8,9 +8,11 @@ wheels/
 
 # Virtual environments
 .venv
+.uv_cache
 
 .idea
 ignore
 
 .env
 *.db
+AGENTS.md

@@ -55,7 +55,7 @@ src/                # 代码根目录
 ```
 
 说明：
-- 模块脚手架由 `src/myapp/cli/create_new_modules.py` 生成，完整目录会包含 `domain/`、`persistence/` 等子目录；当前已存在的模块为精简结构。
+- 模块脚手架由 `src/myapp/cli/create_new_modules.py` 生成。
 
 # 整体待办
 

@@ -55,9 +55,9 @@ def _write_file(path: Path, content: str, *, force: bool, dry_run: bool) -> None
 def _router_py(module_name: str) -> str:
     return (
         "from fastapi import APIRouter\n\n"
-        "from .routes import router as routes_router\n\n"
-        f"router = APIRouter(prefix=\"/{module_name}\", tags=[\"{module_name}\"])\n"
-        "router.include_router(routes_router)\n"
+        "from . import routes\n\n"
+        f"api_router = APIRouter(prefix=\"/{module_name}\")\n"
+        "api_router.include_router(routes.router)\n"
     )
 
 
@@ -76,11 +76,11 @@ def _route_py() -> str:
 
 
 def _module_init_py() -> str:
-    return "from . import api\n"
+    return "from .api import api_router\n"
 
 
 def _api_init_py() -> str:
-    return "from .router import router\n\n__all__ = [\"router\"]\n"
+    return "from .router import api_router\n"
 
 
 def _scaffold_module(
@@ -105,10 +105,6 @@ def _scaffold_module(
         module_dir / "api" / "routes",
         module_dir / "schemas",
         module_dir / "services",
-        module_dir / "domain",
-        module_dir / "persistence",
-        module_dir / "persistence" / "models",
-        module_dir / "persistence" / "repositories",
     ]
     for d in dirs:
         _ensure_dir(d, dry_run=dry_run)
@@ -121,10 +117,6 @@ def _scaffold_module(
         module_dir / "api" / "routes" / f"{route_name}.py": _route_py(),
         module_dir / "schemas" / "__init__.py": "",
         module_dir / "services" / "__init__.py": "",
-        module_dir / "domain" / "__init__.py": "",
-        module_dir / "persistence" / "__init__.py": "",
-        module_dir / "persistence" / "models" / "__init__.py": "",
-        module_dir / "persistence" / "repositories" / "__init__.py": "",
     }
     for path, content in files.items():
         _write_file(path, content, force=force, dry_run=dry_run)
@@ -137,10 +129,8 @@ def _update_main_router(module_name: str, *, dry_run: bool) -> bool:
     if not router_path.exists():
         raise FileNotFoundError(f"router.py not found: {router_path}")
 
-    import_line = (
-        f"from myapp.modules.{module_name}.api import router as {module_name}_router"
-    )
-    include_line = f"router.include_router({module_name}_router)"
+    import_line = f"from myapp.modules import {module_name}"
+    include_line = f"router.include_router({module_name}.api_router)"
 
     text = router_path.read_text(encoding="utf-8")
     if import_line in text and include_line in text:
@@ -153,7 +143,7 @@ def _update_main_router(module_name: str, *, dry_run: bool) -> bool:
         last_import = None
         for idx, line in enumerate(lines):
             stripped = line.strip()
-            if stripped.startswith("from myapp.modules."):
+            if stripped.startswith("from myapp.modules import "):
                 last_module_import = idx
             if stripped.startswith("from ") or stripped.startswith("import "):
                 last_import = idx
@@ -164,12 +154,12 @@ def _update_main_router(module_name: str, *, dry_run: bool) -> bool:
         )
         lines.insert(insert_at, import_line)
 
-    if include_line not in lines:
+    if not any(line.strip() == include_line for line in lines):
         last_include = None
         router_init = None
         for idx, line in enumerate(lines):
             stripped = line.strip()
-            if stripped == "router = APIRouter()":
+            if stripped.startswith("router = APIRouter("):
                 router_init = idx
             if stripped.startswith("router.include_router("):
                 last_include = idx
@@ -178,7 +168,7 @@ def _update_main_router(module_name: str, *, dry_run: bool) -> bool:
         elif router_init is not None:
             insert_at = router_init + 1
         else:
-            raise ValueError("Could not find 'router = APIRouter()' in router.py")
+            raise ValueError("Could not find 'router = APIRouter(...)' in router.py")
         lines.insert(insert_at, include_line)
 
     new_text = "\n".join(lines) + "\n"

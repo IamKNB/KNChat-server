@@ -109,8 +109,3 @@ class User2Self(BaseUser):
     age: int | None = None
     is_active: bool
     created_at: datetime
-
-
-# 定义用户的好友关系
-class UsersLink(SQLModel):
-    pass

@@ -3,13 +3,11 @@ from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Index
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, Index, SQLModel, Relationship, UniqueConstraint
 
 __all__ = [
     "BaseFriendship",
     "Friendship",
-    "Friendship2Self",
     "FriendshipStatus",
     "FriendshipApplySource",
 ]
@@ -32,36 +30,52 @@ class FriendshipApplySource(str, Enum):
 class BaseFriendship(SQLModel):
     # 状态
     status: FriendshipStatus = Field(default=FriendshipStatus.pending)
-    # 记录时间
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), nullable=False)
-    accepted_at: datetime | None = Field(default=None)
 
 
 class Friendship(BaseFriendship, table=True):
     __tablename__ = "friendship"
     __table_args__ = (
+        UniqueConstraint(
+            "pair_low_id",
+            "pair_high_id",
+            name="uq_friendship_pair_low_high",
+        ),
         Index(
-            "ix_friendship_addressee_status",
+            "ix_friendship_addressee_status_created_at",
             "addressee_id",
             "status",
+            "created_at",
+        ),
+        Index(
+            "ix_friendship_requester_status_created_at",
+            "requester_id",
+            "status",
+            "created_at",
+        ),
+        Index(
+            "ix_friendship_status_requester_created_at",
+            "status",
+            "requester_id",
+            "created_at",
+        ),
+        Index(
+            "ix_friendship_status_addressee_created_at",
+            "status",
+            "addressee_id",
+            "created_at",
         ),
     )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), nullable=False)
+    accepted_at: datetime | None = Field(default=None)
     # 申请者
     requester_id: UUID = Field(foreign_key="user.id", primary_key=True)
     # 接受者
     addressee_id: UUID = Field(foreign_key="user.id", primary_key=True)
-    # 无向关系唯一键：按 requester/addressee 升序拼接
-    pair_key: str = Field(
-        min_length=65,
-        max_length=65,
-        unique=True,
-        nullable=False,
-    )
+    # 无向关系唯一键：按 UUID 排序后存储
+    pair_low_id: UUID = Field(foreign_key="user.id", nullable=False)
+    pair_high_id: UUID = Field(foreign_key="user.id", nullable=False)
     # 申请消息
-    request_message: str | None = Field(
-        default=None,
-        max_length=200,
-    )
+    request_message: str | None = Field(default=None)
     # 查找来源
     source: FriendshipApplySource = Field(default=FriendshipApplySource.search)
     # 关系：这条好友记录的发起人
@@ -81,15 +95,3 @@ class Friendship(BaseFriendship, table=True):
             "lazy": "selectin",
         },
     )
-
-    @staticmethod
-    def build_pair_key(requester_id: UUID, addressee_id: UUID) -> str:
-        left, right = sorted((requester_id.hex, addressee_id.hex))
-        return f"{left}:{right}"
-
-
-class Friendship2Self(BaseFriendship):
-    requester_id: UUID
-    addressee_id: UUID
-    source: FriendshipApplySource
-    request_message: str | None = None

@@ -8,6 +8,8 @@ from db.through import UserPermissionGroupLink
 
 if TYPE_CHECKING:
     from auth.permissions import PermissionGroup
+    from myapp.modules.chat import Friendship
+    from myapp.modules.chat import UserBlock
 
 __all__ = [
     "BaseUser",
@@ -35,6 +37,37 @@ class User(BaseUser, table=True):
     age: int | None = None
     email: str = Field(index=True, unique=True)
     password: str
+
+    # 好友
+    sent_friendships: list[Friendship] = Relationship(
+        back_populates="requester",
+        sa_relationship_kwargs={
+            "foreign_keys": "Friendship.requester_id",
+            "lazy": "selectin",
+        },
+    )
+    received_friendships: list[Friendship] = Relationship(
+        back_populates="addressee",
+        sa_relationship_kwargs={
+            "foreign_keys": "Friendship.addressee_id",
+            "lazy": "selectin",
+        },
+    )
+    # 拉黑
+    sent_blocks: list[UserBlock] = Relationship(
+        back_populates="blocker",
+        sa_relationship_kwargs={
+            "foreign_keys": "UserBlock.blocker_id",
+            "lazy": "selectin",
+        },
+    )
+    received_blocks: list[UserBlock] = Relationship(
+        back_populates="blocked",
+        sa_relationship_kwargs={
+            "foreign_keys": "UserBlock.blocked_id",
+            "lazy": "selectin",
+        },
+    )
 
     # 权限与群组
     permission_groups: list["PermissionGroup"] = Relationship(back_populates="users",
@@ -76,8 +109,3 @@ class User2Self(BaseUser):
     age: int | None = None
     is_active: bool
     created_at: datetime
-
-
-# 定义用户的好友关系
-class UsersLink(SQLModel):
-    pass

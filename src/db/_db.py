@@ -1,24 +1,25 @@
-from typing import Annotated
+from functools import lru_cache
+from typing import Annotated, Iterator
 
-from sqlalchemy import event
 from fastapi import Depends
-from sqlmodel import create_engine, Session
+from sqlalchemy.engine import Engine
+from sqlmodel import Session, create_engine
 
 from core import get_settings
 
 settings = get_settings()
-engine = create_engine(settings.db_url)
-
-if settings.db_url.startswith("sqlite"):
-    @event.listens_for(engine, "connect")
-    def _set_sqlite_pragma(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
 
 
-def get_session():
+@lru_cache()
+def get_engine() -> Engine:
+    return create_engine(settings.db_url)
+
+
+def get_session() -> Iterator[Session]:
+    engine = get_engine()
     with Session(engine) as session:
+        if settings.db_url.startswith("sqlite"):
+            session.connection().exec_driver_sql("PRAGMA foreign_keys=ON")
         yield session
 
 

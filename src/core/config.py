@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     jwt_algorithm: str
     cors_allow_origins: str | None = None
     cors_allow_credentials: bool = False
+    cors_dev_origins: str | None = None
+    cors_prod_origins: str | None = None
+    tauri_app_scheme: str = "tauri"
+    tauri_use_https_scheme: bool = False
+    tauri_dev_host: str | None = None
+    tauri_dev_port: int = 1420
 
     model_config = SettingsConfigDict(
         env_file=ROOT_DIR / ".env",

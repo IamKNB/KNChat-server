@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str
     jwt_algorithm: str
+    cors_allow_origins: str | None = None
+    cors_allow_credentials: bool = False
 
     model_config = SettingsConfigDict(
         env_file=ROOT_DIR / ".env",

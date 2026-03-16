@@ -16,3 +16,4 @@ ignore
 .env
 *.db
 AGENTS.md
+tests

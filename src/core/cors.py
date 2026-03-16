@@ -44,6 +44,7 @@ def _build_dev_origins(settings: Settings) -> list[str]:
     if settings.tauri_dev_host:
         host = settings.tauri_dev_host.strip()
         if host:
+            # noinspection HttpUrlsUsage
             defaults.append(f"http://{host}:{settings.tauri_dev_port}")
     return defaults
 

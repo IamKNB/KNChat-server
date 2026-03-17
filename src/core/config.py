@@ -13,6 +13,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 # 加载环境变量
 class Settings(BaseSettings):
     root_dir: Path = ROOT_DIR
+    updates_dir: Path = ROOT_DIR / "updates"
     db_url: str
     port: int
 
